@@ -46,7 +46,6 @@
         dest: "/home/{{ user }}/.bashrc"
         insertafter: EOF
         regexp: export DJANGO_SETTINGS_MODULE
-        line: export DJANGO_SETTINGS_MODULE="project.settings.base"
 
     - name: create user directories
       file: path=/home/{{ user }}/{{ item }} state=directory owner={{ user }} group={{ user }}

@@ -1,7 +1,6 @@
 [program:site]
 command = /home/{{ user }}/.env/bin/python /home/{{ user }}/.env/bin/gunicorn --workers=2 --bind=unix:/home/{{ user }}/run/site.sock project.wsgi:application
 directory = /home/{{ user }}/src/
-environment = DJANGO_SETTINGS_MODULE="project.settings.base"
 autostart = true
 autorestart = true
 redirect_stderr = true

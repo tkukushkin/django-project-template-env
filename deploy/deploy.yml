@@ -2,8 +2,6 @@
 - hosts: server_user
   vars:
     user: "{{ project_name }}"
-  environment:
-    DJANGO_SETTINGS_MODULE: project.settings.base
   tasks:
     - name: push git repository
       local_action: command git push --set-upstream ssh://{{ user }}@{{ ansible_eth1['ipv4']['address'] }}/~/.git master
