@@ -1,0 +1,44 @@
+---
+- hosts: server_user
+  vars:
+    user: "{{ project_name }}"
+  environment:
+    DJANGO_SETTINGS_MODULE: project.settings.base
+  tasks:
+    - name: push git repository
+      local_action: command git push --set-upstream ssh://{{ user }}@{{ ansible_eth1['ipv4']['address'] }}/~/.git master
+      args:
+        chdir: project/
+      tags:
+        - push
+
+    - name: pull to src
+      git: repo=/home/{{ user }}/.git dest=/home/{{ user }}/src
+      tags:
+        - push
+
+    - name: install python requirements
+      pip:
+        virtualenv: /home/{{ user }}/.env
+        requirements: /home/{{ user }}/src/requirements.txt
+      tags:
+        - reqs
+
+    - name: migrate db
+      command: /home/{{ user }}/.env/bin/python manage.py migrate
+      args:
+        chdir: /home/{{ user }}/src
+      tags:
+        - db
+
+    - name: collectstatic
+      command: /home/{{ user }}/.env/bin/python manage.py collectstatic --noinput
+      args:
+        chdir: /home/{{ user }}/src
+      tags:
+        - static
+
+    - name: restart supervisor programs
+      supervisorctl: name={{ item }} state=restarted config=/home/{{ user }}/etc/supervisor/supervisord.conf
+      with_items: "{{ supervisor_programs }}"
+      ignore_errors: yes

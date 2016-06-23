@@ -1,0 +1,7 @@
+[program:{{ project_name }}]
+command = /usr/bin/supervisord -c /home/{{ project_name }}/etc/supervisor/supervisord.conf
+user = {{ user }}
+autostart = true
+autorestart = true
+redirect_stderr = true
+stdout_logfile = /var/log/supervisor/{{ project_name }}.log

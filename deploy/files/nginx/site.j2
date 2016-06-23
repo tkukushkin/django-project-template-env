@@ -1,0 +1,26 @@
+upstream {{ project_name }}_site_server {
+  server unix:/home/{{ user }}/run/site.sock fail_timeout=0;
+}
+
+server {
+  listen {{ port }} default;
+  client_max_body_size 4G;
+  server_name {{ domain }};
+
+  keepalive_timeout 5;
+
+  root /home/{{ user }}/src/project/public;
+
+  location / {
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header Host $http_host;
+    proxy_redirect off;
+
+    if (!-f $request_filename) {
+      proxy_pass http://{{ project_name }}_site_server;
+      break;
+    }
+  }
+
+  error_page 500 502 503 504 /500.html;
+}

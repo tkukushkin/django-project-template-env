@@ -1,0 +1,42 @@
+---
+- hosts: server_root
+  tasks:
+    - name: update apt cache
+      apt: update_cache=true
+      tags:
+        - packages
+        - updates
+
+    - name: install updates
+      apt: upgrade=yes
+      tags:
+        - packages
+        - updates
+
+    - name: install necessary packages
+      apt: pkg={{ item }} state=present
+      with_items:
+        - build-essential
+        - git
+        - git-core
+        - libjpeg8-dev
+        - libpng12-dev
+        - libpq-dev
+        - nginx
+        - postgresql
+        - postgresql-server-dev-all
+        - python-software-properties
+        - python-psycopg2
+        - python3-dev
+        - python3-pip
+        - supervisor
+      tags:
+        - packages
+
+    - name: install virtualenv
+      pip: name=virtualenv state=latest executable=pip3
+      tags:
+        - packages
+
+    - name: disable default nginx host
+      file: path=/etc/nginx/sites-enabled state=absent

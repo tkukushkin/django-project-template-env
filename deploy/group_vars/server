@@ -1,0 +1,6 @@
+---
+project_name: project
+domain: project.rus
+port: 80
+supervisor_programs:
+  - site

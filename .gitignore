@@ -1,0 +1,7 @@
+*.py[cod]
+*.pid
+*.db
+*.retry
+.vagrant/
+__pycache__/
+node_modules/

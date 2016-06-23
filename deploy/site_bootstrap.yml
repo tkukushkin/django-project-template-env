@@ -1,0 +1,123 @@
+---
+- hosts: server_root
+  vars:
+    user: "{{ project_name }}"
+  tasks:
+    - name: create user
+      user: name={{ user }}
+
+    - name: add id_rsa.pub to authorized_keys
+      authorized_key: user={{ user }} key={{ lookup('file', '~/.ssh/id_rsa.pub') }}
+      tags:
+        - add_authorized_key
+
+    - name: create postgresql role
+      become: yes
+      become_user: postgres
+      become_method: su
+      command: createuser {{ user }}
+      ignore_errors: yes
+
+    - name: create database
+      become: yes
+      become_user: postgres
+      become_method: su
+      command: "createdb {{ project_name }} -O {{ user }}"
+      ignore_errors: yes
+
+    - name: create virtualenv
+      pip: virtualenv=/home/{{ user }}/.env name={{ item }} state=latest
+      become: yes
+      become_user: "{{ user }}"
+      become_method: su
+      with_items:
+        - pip
+        - ipython
+
+    - name: add ~/.env/bin/activate to ~/.bashrc
+      lineinfile:
+        dest: "/home/{{ user }}/.bashrc"
+        insertafter: EOF
+        regexp: source ~/.env/bin/activate
+        line: source ~/.env/bin/activate
+
+    - name: add DJANGO_SETTINGS_MODULE to ~/.bashrc
+      lineinfile:
+        dest: "/home/{{ user }}/.bashrc"
+        insertafter: EOF
+        regexp: export DJANGO_SETTINGS_MODULE
+        line: export DJANGO_SETTINGS_MODULE="project.settings.base"
+
+    - name: create user directories
+      file: path=/home/{{ user }}/{{ item }} state=directory owner={{ user }} group={{ user }}
+      with_items:
+        - .git
+        - .ssh
+        - etc
+        - etc/supervisor/
+        - etc/supervisor/conf.d/
+        - etc/nginx
+        - log
+        - run
+        - src
+
+    - name: init repository
+      command: git init --bare
+      args:
+        chdir: "/home/{{ user }}/.git"
+        creates: "/home/{{ user }}/.git/HEAD"
+      become: yes
+      become_user: "{{ user }}"
+      become_method: su
+
+    - name: add supervisord config
+      template:
+        src: files/supervisor/supervisord.conf.j2
+        dest: "/home/{{ user }}/etc/supervisor/supervisord.conf"
+        owner: "{{ user }}"
+        group: "{{ user }}"
+
+    - name: add user's supervisord program to global supervisord
+      template:
+        src: files/supervisor/project.conf.j2
+        dest: /etc/supervisor/conf.d/{{ project_name }}.conf
+
+    - name: update supervisord
+      command: supervisorctl update {{ project_name }}
+
+    - name: add alias for supervisord to ~/.bashrc
+      lineinfile:
+        dest: "/home/{{ user }}/.bashrc"
+        insertafter: EOF
+        regexp: alias supervisorctl
+        line: alias supervisorctl="supervisorctl -c ~/etc/supervisor/supervisord.conf"
+
+    - name: add /home/user/nginx/* to system nginx config
+      lineinfile:
+        dest: /etc/nginx/nginx.conf
+        insertafter: "include /etc/nginx/sites-enabled/"
+        line: "\tinclude /home/{{ user }}/etc/nginx/*;"
+
+    - name: reload nginx
+      service: name=nginx state=reloaded
+
+    - name: add user's supervisord configs
+      template:
+        src: "files/supervisor/conf.d/{{ item }}.conf.j2"
+        dest: "/home/{{ user }}/etc/supervisor/conf.d/{{ item }}.conf"
+        owner: "{{ user }}"
+        group: "{{ user }}"
+      with_items: "{{ supervisor_programs }}"
+
+    - name: update user's supervisord configs
+      command: supervisorctl -c /home/{{ user }}/etc/supervisor/supervisord.conf update
+
+    - name: add nginx config
+      template:
+        src: files/nginx/site.j2
+        dest: "/home/{{ user }}/etc/nginx/site"
+        owner: "{{ user }}"
+        group: "{{ user }}"
+
+    - name: reload nginx
+      service: name=nginx state=reloaded
