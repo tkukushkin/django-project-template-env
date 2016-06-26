@@ -1,5 +1,5 @@
 [program:site]
-command = /home/{{ user }}/.env/bin/python /home/{{ user }}/.env/bin/gunicorn --workers=2 --bind=unix:/home/{{ user }}/run/site.sock project.wsgi:application
+command = /home/{{ user }}/.env/bin/python /home/{{ user }}/.env/bin/gunicorn --workers=2 --log-file - --access-logfile - --bind=unix:/home/{{ user }}/run/site.sock project.wsgi:application
 directory = /home/{{ user }}/src/
 autostart = true
 autorestart = true
